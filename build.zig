@@ -21,6 +21,26 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
+    const libspng = b.dependency("libspng", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    // translate spng.h -> Zig module
+    const spng_translate = b.addTranslateC(.{
+        .root_source_file = libspng.path("spng/spng.h"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const spng_c_mod = spng_translate.createModule();
+    spng_c_mod.addCSourceFile(.{
+        .file = libspng.path("spng/spng.c"),
+        .flags = &.{ "-std=c99", "-DSPNG_STATIC" },
+    });
+
+    spng_c_mod.addIncludePath(libspng.path("spng"));
+    spng_c_mod.linkSystemLibrary("z", .{ .needed = true });
+
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.
@@ -82,6 +102,8 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+
+    exe.root_module.addImport("libspng", spng_c_mod);
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default

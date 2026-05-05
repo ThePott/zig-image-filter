@@ -22,16 +22,17 @@
     // original project's identity. Thus it is recommended to leave the comment
     // on the following line intact, so that it shows up in code reviews that
     // modify the field.
-    .fingerprint = 0x9fc410fb378e2c61, // Changing this has security and trust implications.
+    .fingerprint = 0x9fc410fbdef4537b, // Changing this has security and trust implications.
     // Tracks the earliest Zig version that the package considers to be a
     // supported use case.
-    .minimum_zig_version = "0.16.0-dev.3132+fd2718f82",
+    .minimum_zig_version = "0.16.0",
     // This field is optional.
     // Each dependency must either provide a `url` and `hash`, or a `path`.
     // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
+        .libspng = .{ .name = "libspng", .url = "https://github.com/randy408/libspng/archive/refs/tags/v0.7.4.tar.gz", .hash = "N-V-__8AAModCAATNPKPcCapFcZFQHw0a8VjUyjAokEkvmW7" },
         // See `zig fetch --save <url>` for a command-line interface for adding dependencies.
         //.example = .{
         //    // When updating this field to a new URL, be sure to delete the corresponding
