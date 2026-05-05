@@ -1,71 +1,31 @@
 const std = @import("std");
-const Io = std.Io;
+const libspng = @import("libspng");
+const expect = std.testing.expect;
 
-const zig_image_filter = @import("zig_image_filter");
+fn getImageHeader(spng_context_pointer: *libspng.spng_ctx) !void {
+    var image_header: libspng.spng_ihdr = undefined;
+    const image_header_result = libspng.spng_get_ihdr(spng_context_pointer, &image_header);
+    std.debug.print("image header result: {any}\n", .{image_header_result});
+    if (image_header_result != 0) @panic("FAILED TO GET IMAGE HEADER");
+}
 
-pub fn main(init: std.process.Init) !void {
-    // Prints to stderr, unbuffered, ignoring potential errors.
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // This is appropriate for anything that lives as long as the process.
-    const arena: std.mem.Allocator = init.arena.allocator();
-
-    // Accessing command line arguments:
-    const args = try init.minimal.args.toSlice(arena);
-    for (args) |arg| {
-        std.log.info("arg: {s}", .{arg});
+pub fn main() !void {
+    // NOTE: rb - read binary
+    const image_file = libspng.fopen("src/assets/target-png-image.png", "rb");
+    if (image_file == null) {
+        @panic("IMAGE NOT FOUND");
+    }
+    defer {
+        const file_close_result = libspng.fclose(image_file);
+        if (file_close_result != 0) @panic("FAILED TO CLOSE FILE");
     }
 
-    // In order to do I/O operations need an `Io` instance.
-    const io = init.io;
+    std.debug.print("image file: {any}\n", .{image_file});
 
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
-    const stdout_writer = &stdout_file_writer.interface;
+    // TODO: 도대체 뭐가 0이냐
+    const spng_context = libspng.spng_ctx_new(0) orelse unreachable;
+    const set_png_file_result = libspng.spng_set_png_file(spng_context, image_file);
+    std.debug.print("set png file result: {any}\n", .{set_png_file_result});
 
-    try zig_image_filter.printAnotherMessage(stdout_writer);
-
-    try stdout_writer.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    try std.testing.fuzz({}, testOne, .{});
-}
-
-fn testOne(context: void, smith: *std.testing.Smith) !void {
-    _ = context;
-    // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(u8) = .empty;
-    defer list.deinit(gpa);
-    while (!smith.eos()) switch (smith.value(enum { add_data, dup_data })) {
-        .add_data => {
-            const slice = try list.addManyAsSlice(gpa, smith.value(u4));
-            smith.bytes(slice);
-        },
-        .dup_data => {
-            if (list.items.len == 0) continue;
-            if (list.items.len > std.math.maxInt(u32)) return error.SkipZigTest;
-            const len = smith.valueRangeAtMost(u32, 1, @min(32, list.items.len));
-            const off = smith.valueRangeAtMost(u32, 0, @intCast(list.items.len - len));
-            try list.appendSlice(gpa, list.items[off..][0..len]);
-            try std.testing.expectEqualSlices(
-                u8,
-                list.items[off..][0..len],
-                list.items[list.items.len - len ..],
-            );
-        },
-    };
+    try getImageHeader(spng_context);
 }
